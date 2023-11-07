@@ -30,11 +30,14 @@ async function run() {
 
         // data collection  
         const serviceCollection = client.db('RoyalDB').collection('services');
+        const bookingsCollection = client.db('RoyalDB').collection('bookings');
 
         //data created
-        app.post('/services', async (req, res) => {
-            
-          
+        app.get('/services', async (req, res) => {
+            const cursor = serviceCollection.find()
+            const result = await cursor.toArray();
+            res.send(result);
+
         })
         //data read 
         // app.get('/cars', async (req, res) => {
@@ -53,13 +56,47 @@ async function run() {
 
         // })
 
-        // app.get('/cars/:id', async (req, res) => {
-        //     const id = req.params.id;
-        //     const query = { _id: new ObjectId(id) }
-        //     const result = await carsCollection.findOne(query);
-        //     res.send(result)
+        app.get('/services/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const query = { _id: new ObjectId(id) }
+                const result = await serviceCollection.findOne(query);
+                res.send(result)
+            }
+            catch {
+                error => console.log(error)
+            }
 
-        // })
+
+        })
+
+        //bookings 
+        app.post('/bookings', async (req, res) => {
+            try {
+                const bookings = req.body;
+                console.log(bookings);
+                const result = await bookingsCollection.insertOne(bookings);
+                res.send(result)
+            }
+            catch {
+                error => console.log(error)
+            }
+
+        })
+
+        app.get('/bookings', async (req, res) => {
+            try {
+                const result = await bookingsCollection.find().toArray();
+                res.send(result)
+            }
+            catch {
+                error => console.log(error)
+            }
+
+
+        })
+
+
         // //update data
         // app.put('/cars/:id', async (req, res) => {
         //     const id = req.params.id;
