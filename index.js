@@ -75,6 +75,12 @@ async function run() {
                 const category = req.query.category;
                 const sortField = req.query.sortField
                 const sortOrder = req.query.sortOrder
+
+                // pagination 
+                const page = Number(req.query.page)
+                const limit = Number(req.query.limit)
+                const skip = (page - 1) * limit
+
                 if (category) {
                     queryObject.category = category
                 }
@@ -83,9 +89,16 @@ async function run() {
                     sortObject[sortField] = sortOrder
                 }
 
-                const cursor = serviceCollection.find(queryObject).sort(sortObject)
+                const cursor = serviceCollection.find(queryObject).skip(skip).limit(limit).sort(sortObject)
                 const result = await cursor.toArray()
-                res.send(result)
+                //res.send(result)
+
+                const totalData = await serviceCollection.countDocuments()
+                res.send({
+                    totalData,
+                    result
+                }
+                )
             }
             catch {
                 error => console.log(error)
@@ -109,7 +122,11 @@ async function run() {
 
         app.get('/bookings', async (req, res) => {
             try {
-                const result = await bookingsCollection.find().toArray();
+                let query = {}
+                if (req.query?.email) {
+                    query = { email: req.query.email }
+                }
+                const result = await bookingsCollection.find(query).toArray();
                 res.send(result)
             }
             catch {
