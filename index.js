@@ -4,6 +4,7 @@ const app = express();
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const jwt = require('jsonwebtoken')
 const { ObjectId } = require("mongodb");
 // middleware
 app.use(cors());
@@ -25,23 +26,19 @@ async function run() {
     try {
 
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        client.connect();
 
 
         // data collection  
         const serviceCollection = client.db('RoyalDB').collection('services');
         const bookingsCollection = client.db('RoyalDB').collection('bookings');
 
-        //data created
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            console.log(user)
+            res.send(user)
 
-
-        // })
-        //data read 
-        // app.get('/cars', async (req, res) => {
-        //     const cursor = carsCollection.find();
-        //     const result = await cursor.toArray();
-        //     res.send(result);
-        // })
+        })
 
 
         //data delete 
@@ -68,10 +65,24 @@ async function run() {
             catch {
                 error => console.log(error)
             }
-            //http://localhost:5000/services?category=categoryValue
-            //http://localhost:5000/services?sortFeild=price&priceOrder=asc
 
         })
+        app.get('/bookings/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const query = { _id: new ObjectId(id) }
+                const result = await bookingsCollection.findOne(query);
+                res.send(result)
+            }
+            catch {
+                error => console.log(error)
+            }
+
+        })
+
+        //http://localhost:5000/services?category=categoryValue
+        //http://localhost:5000/services?sortFeild=price&priceOrder=asc
+
         app.get('/services', async (req, res) => {
             try {
                 let queryObject = {}
@@ -143,25 +154,18 @@ async function run() {
 
 
         // //update data
-        // app.put('/cars/:id', async (req, res) => {
-        //     const id = req.params.id;
-        //     const filter = { _id: new ObjectId(id) }
-        //     const options = { upsert: true };
-        //     const updatedCar = req.body;
-        //     const cars = {
-        //         $set: {
-        //             name: updatedCar.name,
-        //             brand: updatedCar.brand,
-        //             type: updatedCar.type,
-        //             price: updatedCar.price,
-        //             details: updatedCar.details,
-        //             photo: updatedCar.photo
-
-        //         }
-        //     }
-        //     const result = await carsCollection.updateOne(filter,cars ,options)
-        //     res.send(result);
-        // })
+        app.patch('/bookings/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) }
+            const updatedBookings = req.body;
+            const bookings = {
+                $set: {
+                    date: updatedBookings.date
+                }
+            }
+            const result = await bookingsCollection.updateOne(filter, bookings)
+            res.send(result);
+        })
 
 
 
