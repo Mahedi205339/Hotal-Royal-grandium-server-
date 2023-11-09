@@ -44,14 +44,19 @@ async function run() {
         // })
 
 
-        // //data delete 
-        // app.delete('/cars/:id', async (req, res) => {
-        //     const id = req.params.id;
-        //     const query = { _id: new ObjectId(id) }
-        //     const result = await carsCollection.deleteOne(query);
-        //     res.send(result)
+        //data delete 
+        app.delete('/bookings/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const query = { _id: new ObjectId(id) }
+                const result = await bookingsCollection.deleteOne(query);
+                res.send(result)
+            }
+            catch {
+                error => console.log(error)
+            }
 
-        // })
+        })
 
         app.get('/services/:id', async (req, res) => {
             try {
