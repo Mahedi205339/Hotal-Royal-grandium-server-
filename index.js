@@ -5,10 +5,19 @@ require('dotenv').config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 const { ObjectId } = require("mongodb");
 // middleware
-app.use(cors());
+app.use(cors({
+    origin: ['https://hotel-grandium.web.app',
+        'https://hotel-grandium.firebaseapp.com',
+        'http://localhost:5173'
+
+    ],
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0r9jhzc.mongodb.net/?retryWrites=true&w=majority`;
@@ -33,11 +42,36 @@ async function run() {
         const serviceCollection = client.db('RoyalDB').collection('services');
         const bookingsCollection = client.db('RoyalDB').collection('bookings');
 
-        app.post('/jwt', async (req, res) => {
-            const user = req.body;
-            console.log(user)
-            res.send(user)
+        const logger = (req, res, next) => {
+            console.log('log: info', req.method, req.url);
+            next();
+        }
 
+        const verifyToken = (req, res, next) => {
+            const token = req?.cookies?.token;
+
+            if (!token) {
+                return res.status(401).send({ message: 'Authorized Error' })
+            }
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+                if (error) {
+                    return res.status(401).send({ message: 'Access Unauthorized ' })
+                }
+                req.user = decoded;
+                next();
+            })
+        }
+
+        app.post('/jwt', logger, async (req, res) => {
+            const user = req.body;
+            console.log('user for token', user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: false,
+            })
+                .send({ success: true });
         })
 
 
@@ -67,7 +101,7 @@ async function run() {
             }
 
         })
-        app.get('/bookings/:id', async (req, res) => {
+        app.get('/bookings/:id', logger, verifyToken, async (req, res) => {
             try {
                 const id = req.params.id;
                 const query = { _id: new ObjectId(id) }
@@ -83,7 +117,7 @@ async function run() {
         //http://localhost:5000/services?category=categoryValue
         //http://localhost:5000/services?sortFeild=price&priceOrder=asc
 
-        app.get('/services', async (req, res) => {
+        app.get('/services', logger, async (req, res) => {
             try {
                 let queryObject = {}
                 let sortObject = {}
@@ -136,8 +170,12 @@ async function run() {
 
         })
 
-        app.get('/bookings', async (req, res) => {
+        app.get('/bookings', verifyToken, logger, async (req, res) => {
             try {
+                if (req.query?.email !== req.user.email) {
+                    return res.status(403).send({ message: 'forbidden access' })
+                }
+                console.log(req.cookies.token)
                 let query = {}
                 if (req.query?.email) {
                     query = { email: req.query.email }
