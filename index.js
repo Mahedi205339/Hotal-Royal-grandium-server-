@@ -41,6 +41,7 @@ async function run() {
         // data collection  
         const serviceCollection = client.db('RoyalDB').collection('services');
         const bookingsCollection = client.db('RoyalDB').collection('bookings');
+        const feedbackCollection = client.db('RoyalDB').collection('feedback');
 
         const logger = (req, res, next) => {
             console.log('log: info', req.method, req.url);
@@ -62,17 +63,43 @@ async function run() {
             })
         }
 
-        app.post('/jwt', logger, async (req, res) => {
-            const user = req.body;
-            console.log('user for token', user);
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+        // app.post('/jwt', logger, async (req, res) => {
+        //     const user = req.body;
+        //     console.log('user for token', user);
+        //     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: false,
-            })
-                .send({ success: true });
+        //     res.cookie('token', token, {
+        //         httpOnly: true,
+        //         secure: true,
+        //         sameSite: 'none'
+        //     })
+        //         .send({ success: true });
+        // })
+
+        app.post('/jwt', async (req, res) => {
+            try {
+                const user = req.body
+                const token = jwt.sign(user,process.env.ACCESS_TOKEN_SECRET , {
+                    expiresIn: '1d',
+                })
+                res
+                    .cookie('token', token, {
+                        httpOnly: true,
+                        secure: true,
+                        sameSite: 'none'
+                    })
+                    .send({
+                        status: true,
+                    })
+            } catch (error) {
+                res.send({
+                    status: true,
+                    error: error.message,
+                })
+            }
         })
+
+
 
 
         //data delete 
@@ -101,7 +128,7 @@ async function run() {
             }
 
         })
-        app.get('/bookings/:id', logger, verifyToken, async (req, res) => {
+        app.get('/bookings/:id', async (req, res) => {
             try {
                 const id = req.params.id;
                 const query = { _id: new ObjectId(id) }
@@ -169,13 +196,25 @@ async function run() {
             }
 
         })
-
-        app.get('/bookings', verifyToken, logger, async (req, res) => {
+        app.post('/feedback', async (req, res) => {
             try {
-                if (req.query?.email !== req.user.email) {
-                    return res.status(403).send({ message: 'forbidden access' })
-                }
-                console.log(req.cookies.token)
+                const feedback = req.body;
+                console.log(feedback);
+                const result = await feedbackCollection.insertOne(feedback);
+                res.send(result)
+            }
+            catch {
+                error => console.log(error)
+            }
+
+        })
+
+        app.get('/bookings',  async (req, res) => {
+            try {
+                // if (req.query?.email !== req.user.email) {
+                //     return res.status(403).send({ message: 'forbidden access' })
+                // }
+                // console.log(req.cookies.token)
                 let query = {}
                 if (req.query?.email) {
                     query = { email: req.query.email }
@@ -208,7 +247,7 @@ async function run() {
 
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
